@@ -1,6 +1,0 @@
-
-" let g:clang_user_options += 
-"        \ '-I /opt/ros/groovy/include/'
-set path+=/opt/ros/groovy/include/
-
-set makeprg=cd\ ../../../\ &&\ catkin_make
