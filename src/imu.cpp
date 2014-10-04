@@ -12,6 +12,8 @@
 #include "imu/bool_msg.h"
 #include "Comm.h"
 
+#include <sensor_msgs/Imu.h>
+
 inline float deg_to_rad(float deg) {
 	// 180度リミッター（Z軸のみ）
 	return deg/180.0f*M_PI;
@@ -20,8 +22,7 @@ inline float deg_to_rad(float deg) {
 // 要求があったときに，URGのデータを別のトピックに送信するだけ
 class IMU {
 	private :
-		tf::TransformBroadcaster imu_pub;
-		//ros::Publisher  imu_pub_;
+		ros::Publisher imu_pub_;
 		ros::ServiceServer reset_service_;
 		ros::ServiceServer carivrate_service_;
 		float geta;
@@ -61,7 +62,7 @@ class IMU {
 			return true;
 		}
 		IMU(ros::NodeHandle node) :
-			//imu_pub_(node.advertise<geometry_msgs::Twist>("imu_data", 1000)), 
+			imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 1000)),
 			reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
 			carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
 			geta(0), gyro_unit(0.00836181640625), acc_unit(0.8), init_angle(0.0),
@@ -173,23 +174,27 @@ class IMU {
 				output_data.angular.x = deg_to_rad(output_data.angular.x);
 				output_data.angular.y = deg_to_rad(output_data.angular.y);
 				output_data.angular.z = deg_to_rad(output_data.angular.z);
-				imu_pub.sendTransform(
-					tf::StampedTransform(
-						tf::Transform(
-							tf::Quaternion(
-								output_data.angular.x,
-								output_data.angular.y,
-								output_data.angular.z
-							), 
-							tf::Vector3(0.0, 0.0, 0.0)
-						),
-						ros::Time::now(),
-						"imu_link", 
-						"base_link"
-					)
-				);
-				//imu_pub_.publish(output_data);
-				ros::spinOnce();
+				
+                sensor_msgs::Imu output_data_imu;
+                tf::quaternionTFToMsg(tf::Quaternion(
+                                        output_data.angular.x, 
+                                        output_data.angular.y, 
+                                        output_data.angular.z
+                                     ), 
+                                     output_data_imu.orientation
+                );
+
+                output_data_imu.angular_velocity.x = output_data.angular.x;
+                output_data_imu.angular_velocity.y = output_data.angular.y;
+                output_data_imu.angular_velocity.z = output_data.angular.z;
+                
+                output_data_imu.linear_acceleration.x = output_data.linear.x;
+                output_data_imu.linear_acceleration.y = output_data.linear.y;
+                output_data_imu.linear_acceleration.z = output_data.linear.z;
+
+				imu_pub_.publish(output_data_imu);
+				
+                ros::spinOnce();
 				loop_rate.sleep();
 			}
 		}
