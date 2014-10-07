@@ -1,0 +1,5 @@
+<launch>
+    <node name="imu" pkg="imu" type="imu" respawn="false" output="screen"/>
+    <node name="imu_tf_broadcaster" pkg="imu" type="tf_broadcaster" respawn="false"/>
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find imu)/rviz_cfg/imu.rviz"/>
+</launch>

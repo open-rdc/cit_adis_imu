@@ -5,11 +5,11 @@ project(imu)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  geometry_msgs
-  roscpp
-  sensor_msgs
-  tf
-	message_generation
+    geometry_msgs
+    roscpp
+    sensor_msgs
+    tf
+    message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -165,4 +165,6 @@ include_directories(
 # catkin_add_nosetests(test)
 
 add_executable(imu src/imu.cpp src/Comm.cpp)
+add_executable(tf_broadcaster src/tf_broadcaster.cpp)
 target_link_libraries(imu ${catkin_LIBRARIES})
+target_link_libraries(tf_broadcaster ${catkin_LIBRARIES})
