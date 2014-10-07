@@ -144,11 +144,10 @@ class IMU {
 				output_data.linear.y = ((short)strtol(temp, NULL, 16)) * acc_unit;
 				memmove(temp,command2+20,4);
 				output_data.linear.z = init_angle + ((short)strtol(temp, NULL, 16)) * acc_unit ;
-				// 180度リミッター（Z軸のみ）
-				while (output_data.angular.z < -180) 
-					output_data.angular.z += 180;
-				while (output_data.angular.z > 180) 
-					output_data.angular.z -= 180;
+				//while (output_data.angular.z < -180) 
+				//	output_data.angular.z += 180;
+				//while (output_data.angular.z > 180) 
+				//	output_data.angular.z -= 180;
 				//温度読み込み
 				memmove(temp,command2+24,4);
 				tempdata = ((short)strtol(temp, NULL, 16)) * temp_unit + 25.0;
