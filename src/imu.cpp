@@ -176,6 +176,7 @@ class IMU {
 				output_data.angular.z = deg_to_rad(output_data.angular.z);
 				
                 sensor_msgs::Imu output_data_imu;
+                output_data_imu.header.stamp = ros::Time::now();
                 tf::quaternionTFToMsg(tf::Quaternion(
                                         output_data.angular.x, 
                                         output_data.angular.y, 
