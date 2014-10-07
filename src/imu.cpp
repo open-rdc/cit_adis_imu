@@ -27,13 +27,13 @@ class IMU {
 		ros::ServiceServer carivrate_service_;
 		float geta;
 		CComm usb;
-		float gyro_unit;
-		float acc_unit;
-		float init_angle;
+        double gyro_unit;
+		double acc_unit;
+		double init_angle;
 		std::string port_name;
 		int   baudrate;
 		ros::Rate loop_rate;
-		int  revice_digit_;
+		int  z_axis_dir_;
 
 	public:
 		bool resetCallback(imu::bool_msg::Request  &req, 
@@ -66,26 +66,16 @@ class IMU {
 			reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
 			carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
 			geta(0), gyro_unit(0.00836181640625), acc_unit(0.8), init_angle(0.0),
-			port_name("/dev/ttyUSB0"), baudrate(115200), loop_rate(1000), revice_digit_(1)
+			port_name("/dev/ttyUSB0"), baudrate(115200), loop_rate(1000), z_axis_dir_(-1)
 	{
-		// パラメータが定義されている場合は読み込んで上書き
-		ros::NodeHandle private_nh_("~");
-		std::string read_string; 
-		if(private_nh_.getParam("port_name", read_string))
-			port_name = read_string;
-		float read_float; 
-		if(ros::param::get("gyro_unit", read_float))
-			gyro_unit = read_float;
-		if(ros::param::get("acc_unit", read_float))
-			acc_unit = read_float;
-		int read_int;
-		if(ros::param::get("baud_rate", read_int))
-			baudrate = read_float;
-		if(ros::param::get("init_angle", read_float))
-			init_angle = read_float;
-		if(ros::param::get("revice_digit", read_int))
-			revice_digit_ = read_int;
-	}
+        ros::NodeHandle private_nh("~");
+        private_nh.getParam("port_name", port_name);
+        private_nh.param<double>("gyro_unit", gyro_unit, gyro_unit);
+        private_nh.param<double>("acc_unit", acc_unit, acc_unit);
+        private_nh.param<int>("baud_rate", baudrate, baudrate);
+        private_nh.param<double>("init_angle", init_angle, init_angle);
+        private_nh.param<int>("z_axis_dir", z_axis_dir_, z_axis_dir_);
+    }
 		bool init() {
 			char command[2] = {0};
 			char command2[101] = {0};
@@ -146,7 +136,7 @@ class IMU {
 				memmove(temp,command2+4,4);
 				output_data.angular.y = ((short)strtol(temp, NULL, 16)) * gyro_unit;
 				memmove(temp,command2+8,4);
-				output_data.angular.z = ((short)strtol(temp, NULL, 16)) * gyro_unit * revice_digit_;
+				output_data.angular.z = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
 				//加速度読み込み
 				memmove(temp,command2+12,4);
 				output_data.linear.x = ((short)strtol(temp, NULL, 16)) * acc_unit;
