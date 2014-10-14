@@ -166,6 +166,8 @@ class IMU {
 				
                 sensor_msgs::Imu output_data_imu;
                 output_data_imu.header.stamp = ros::Time::now();
+                output_data_imu.orientation = tf::createQuaternionMsgFromYaw(output_data.angular.z);
+                /*
                 tf::quaternionTFToMsg(tf::Quaternion(
                                         output_data.angular.x, 
                                         output_data.angular.y, 
@@ -173,6 +175,7 @@ class IMU {
                                      ), 
                                      output_data_imu.orientation
                 );
+                */
 
                 output_data_imu.angular_velocity.x = output_data.angular.x;
                 output_data_imu.angular_velocity.y = output_data.angular.y;
