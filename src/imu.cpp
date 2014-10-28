@@ -15,9 +15,25 @@
 #include <sensor_msgs/Imu.h>
 
 inline float deg_to_rad(float deg) {
-    // 180度リミッター（Z軸のみ）
-    return deg/180.0f*M_PI;
+    return deg / 180.0f * M_PI;
 }
+
+struct ImuData {
+    double angular_deg[3];
+    double linear_acc[3];
+    double temp;
+
+    ImuData() : 
+        temp(0)
+    {
+        for(int i=0; i < 2; i++){
+            angular_deg[i] = 0;
+            linear_acc[i] = 0;
+        }
+    }
+};
+
+
 // 角度ごとにURGのデータを送信するためのサービス
 // 要求があったときに，URGのデータを別のトピックに送信するだけ
 class IMU {
@@ -34,6 +50,44 @@ private:
     int   baudrate;
     ros::Rate loop_rate;
     int  z_axis_dir_;
+
+    ImuData getImuData(){
+        ImuData data;
+        char command[2] = {0};
+        char command2[50] = {0};
+        char temp[6];
+        const float temp_unit = 0.00565;
+        
+        sprintf(command, "o");
+        usb.Send(command, strlen(command));
+        //usleep(30000);
+        ros::Duration(0.05).sleep();
+        
+        usb.Recv(command2, 50);
+        ROS_INFO_STREAM("recv = " << command2);
+
+        memmove(temp,command2,4);
+        data.angular_deg[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
+        memmove(temp,command2+4,4);
+        data.angular_deg[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
+        memmove(temp,command2+8,4);
+        data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
+
+        memmove(temp,command2+12,4);
+        data.linear_acc[0] = ((short)strtol(temp, NULL, 16)) * acc_unit;
+        memmove(temp,command2+16,4);
+        data.linear_acc[1] = ((short)strtol(temp, NULL, 16)) * acc_unit;
+        memmove(temp,command2+20,4);
+        data.linear_acc[2] = init_angle + ((short)strtol(temp, NULL, 16)) * acc_unit ;
+
+        memmove(temp,command2+24,4);
+        data.temp = ((short)strtol(temp, NULL, 16)) * temp_unit + 25.0;
+        
+        //while(data.angular_deg[2] < -180) data.angular_deg[2] += 180;
+        //while(data.angular_deg[2] > 180) data.angular_deg[2] -= 180;
+
+        return data;
+    }
 
 public:
     bool resetCallback(imu::bool_msg::Request  &req, 
@@ -64,11 +118,11 @@ public:
     }
 
     IMU(ros::NodeHandle node) :
-        imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 1000)),
+        imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 10)),
         reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
         carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
         geta(0), gyro_unit(0.00836181640625), acc_unit(0.8), init_angle(0.0),
-        port_name("/dev/ttyUSB0"), baudrate(115200), loop_rate(1000), z_axis_dir_(-1)
+        port_name("/dev/ttyUSB0"), baudrate(115200), loop_rate(50), z_axis_dir_(-1)
     {
         ros::NodeHandle private_nh("~");
         private_nh.getParam("port_name", port_name);
@@ -119,52 +173,36 @@ public:
     }
 
     void run() {
+        const double LPF = 0;
+        double old_angular_z_deg = getImuData().angular_deg[2];
+
         while (ros::ok()) {
-            char command[2] = {0};
-            char command2[50] = {0};
-            char temp[6];
-            const float temp_unit = 0.00565;
-            float tempdata;
-            //コマンド送信
-            //oコマンドでジャイロ3軸、加速度3軸、温度が出力される
-            sprintf(command, "o");
-            usb.Send(command, strlen(command));
-            usleep(30000);
-            //結果受信
-            usb.Recv(command2, 50);			//受信
-            ROS_INFO_STREAM("recv = " << command2);
-            sensor_msgs::Imu output_data;
-            output_data.header.stamp = ros::Time::now();
+            sensor_msgs::Imu output_msg;
+            ImuData data = getImuData();
+            output_msg.header.stamp = ros::Time::now();
+            
+            //ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
+            //ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
+            ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
+            
+            if(std::abs(old_angular_z_deg - data.angular_deg[2]) > 20){
+                ROS_WARN("Angle change too large");
+            }
 
-            memmove(temp,command2,4);
-            double angular_x_deg = ((short)strtol(temp, NULL, 16)) * gyro_unit;
-            memmove(temp,command2+4,4);
-            double angular_y_deg = ((short)strtol(temp, NULL, 16)) * gyro_unit;
-            memmove(temp,command2+8,4);
-            double angular_z_deg = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
+            data.angular_deg[2] = data.angular_deg[2] * (1 - LPF) + old_angular_z_deg * LPF;
 
-            ROS_INFO_STREAM("x_deg = " << angular_x_deg);
-            ROS_INFO_STREAM("y_deg = " << angular_y_deg);
-            ROS_INFO_STREAM("z_deg = " << angular_z_deg);
+            output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(data.angular_deg[2]));
+            output_msg.linear_acceleration.x = data.linear_acc[0];
+            output_msg.linear_acceleration.y = data.linear_acc[1];
+            output_msg.linear_acceleration.z = data.linear_acc[2];
 
-            output_data.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
-
-            //加速度読み込み
-            memmove(temp,command2+12,4);
-            output_data.linear_acceleration.x = ((short)strtol(temp, NULL, 16)) * acc_unit;
-            memmove(temp,command2+16,4);
-            output_data.linear_acceleration.y = ((short)strtol(temp, NULL, 16)) * acc_unit;
-            memmove(temp,command2+20,4);
-            output_data.linear_acceleration.z = init_angle + ((short)strtol(temp, NULL, 16)) * acc_unit ;
-
-            memmove(temp,command2+24,4);
-            tempdata = ((short)strtol(temp, NULL, 16)) * temp_unit + 25.0;
-            ROS_INFO_STREAM("temp = " << tempdata);
-
-            imu_pub_.publish(output_data);
+            //ROS_INFO_STREAM("temp = " << data.temp);
+            
+            imu_pub_.publish(output_msg);
+            old_angular_z_deg = data.angular_deg[2];
 
             ros::spinOnce();
-            loop_rate.sleep();
+            //loop_rate.sleep();
         }
     }
 };
