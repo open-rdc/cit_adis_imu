@@ -128,64 +128,36 @@ class IMU {
 				usleep(30000);
 				//結果受信
 				usb.Recv(command2, 50);			//受信
-				std::cout << "recv = " << command2 << std::endl;
-				geometry_msgs::Twist output_data;
-				//ジャイロ読み込み
-				memmove(temp,command2,4);
-				output_data.angular.x = ((short)strtol(temp, NULL, 16)) * gyro_unit;
+				ROS_INFO_STREAM("recv = " << command2);
+				sensor_msgs::Imu output_data;
+                output_data.header.stamp = ros::Time::now();
+
+                memmove(temp,command2,4);
+				double angular_x_deg = ((short)strtol(temp, NULL, 16)) * gyro_unit;
 				memmove(temp,command2+4,4);
-				output_data.angular.y = ((short)strtol(temp, NULL, 16)) * gyro_unit;
+				double angular_y_deg = ((short)strtol(temp, NULL, 16)) * gyro_unit;
 				memmove(temp,command2+8,4);
-				output_data.angular.z = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
-				//加速度読み込み
+				double angular_z_deg = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
+                
+                ROS_INFO_STREAM("x_deg = " << angular_x_deg);
+                ROS_INFO_STREAM("y_deg = " << angular_y_deg);
+                ROS_INFO_STREAM("z_deg = " << angular_z_deg);
+                
+                output_data.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
+
+                //加速度読み込み
 				memmove(temp,command2+12,4);
-				output_data.linear.x = ((short)strtol(temp, NULL, 16)) * acc_unit;
+				output_data.linear_acceleration.x = ((short)strtol(temp, NULL, 16)) * acc_unit;
 				memmove(temp,command2+16,4);
-				output_data.linear.y = ((short)strtol(temp, NULL, 16)) * acc_unit;
+				output_data.linear_acceleration.y = ((short)strtol(temp, NULL, 16)) * acc_unit;
 				memmove(temp,command2+20,4);
-				output_data.linear.z = init_angle + ((short)strtol(temp, NULL, 16)) * acc_unit ;
-				//while (output_data.angular.z < -180) 
-				//	output_data.angular.z += 180;
-				//while (output_data.angular.z > 180) 
-				//	output_data.angular.z -= 180;
-				//温度読み込み
+				output_data.linear_acceleration.z = init_angle + ((short)strtol(temp, NULL, 16)) * acc_unit ;
+				
 				memmove(temp,command2+24,4);
 				tempdata = ((short)strtol(temp, NULL, 16)) * temp_unit + 25.0;
-				// 出力データの表示
-				std::cout << "ang_x = " << output_data.angular.x
-					<< "ang_y = " << output_data.angular.y
-					<< "ang_z = " << output_data.angular.z
-					<< "ang_z_orig = " << output_data.angular.z  << std::endl;
-				std::cout << "acc_x = " << output_data.linear.x
-					<< "acc_y = " << output_data.linear.y
-					<< "acc_z = " << output_data.linear.z << std::endl;
-				std::cout << "temp  = " << tempdata << std::endl;
-				output_data.angular.x = deg_to_rad(output_data.angular.x);
-				output_data.angular.y = deg_to_rad(output_data.angular.y);
-				output_data.angular.z = deg_to_rad(output_data.angular.z);
-				
-                sensor_msgs::Imu output_data_imu;
-                output_data_imu.header.stamp = ros::Time::now();
-                output_data_imu.orientation = tf::createQuaternionMsgFromYaw(output_data.angular.z);
-                /*
-                tf::quaternionTFToMsg(tf::Quaternion(
-                                        output_data.angular.x, 
-                                        output_data.angular.y, 
-                                        output_data.angular.z
-                                     ), 
-                                     output_data_imu.orientation
-                );
-                */
-
-                output_data_imu.angular_velocity.x = output_data.angular.x;
-                output_data_imu.angular_velocity.y = output_data.angular.y;
-                output_data_imu.angular_velocity.z = output_data.angular.z;
+				ROS_INFO_STREAM("temp = " << tempdata);
                 
-                output_data_imu.linear_acceleration.x = output_data.linear.x;
-                output_data_imu.linear_acceleration.y = output_data.linear.y;
-                output_data_imu.linear_acceleration.z = output_data.linear.z;
-
-				imu_pub_.publish(output_data_imu);
+				imu_pub_.publish(output_data);
 				
                 ros::spinOnce();
 				loop_rate.sleep();
