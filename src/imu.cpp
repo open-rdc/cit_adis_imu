@@ -14,8 +14,13 @@
 
 #include <sensor_msgs/Imu.h>
 
-inline float deg_to_rad(float deg) {
+float deg_to_rad(float deg) {
     return deg / 180.0f * M_PI;
+}
+
+template<class T>
+bool isInRange(T value, T max, T min){
+    return (value >= min) && (value <= max);
 }
 
 struct ImuData {
@@ -61,7 +66,7 @@ private:
         sprintf(command, "o");
         usb.Send(command, strlen(command));
         //usleep(30000);
-        ros::Duration(0.05).sleep();
+        ros::Duration(0.03).sleep();
         
         usb.Recv(command2, 50);
         ROS_INFO_STREAM("recv = " << command2);
@@ -173,8 +178,8 @@ public:
     }
 
     void run() {
-        const double LPF = 0;
         double old_angular_z_deg = getImuData().angular_deg[2];
+        unsigned short abnormal_count = 0;
 
         while (ros::ok()) {
             sensor_msgs::Imu output_msg;
@@ -185,11 +190,16 @@ public:
             //ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
             ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
             
-            if(std::abs(old_angular_z_deg - data.angular_deg[2]) > 20){
-                ROS_WARN("Angle change too large");
+            if(!isInRange(std::abs(old_angular_z_deg), 180.0, 165.0) && !isInRange(std::abs(data.angular_deg[2]), 180.0, 165.0) &&
+                std::abs(old_angular_z_deg - data.angular_deg[2]) > 40 && abnormal_count < 4){
+                
+                ROS_WARN_STREAM("Angle change too large: z = " << data.angular_deg[2]);
+                ROS_WARN_STREAM("old_z = " << old_angular_z_deg);
+                data.angular_deg[2] = old_angular_z_deg;
+                abnormal_count++;
+            }else{
+                abnormal_count = 0;
             }
-
-            data.angular_deg[2] = data.angular_deg[2] * (1 - LPF) + old_angular_z_deg * LPF;
 
             output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(data.angular_deg[2]));
             output_msg.linear_acceleration.x = data.linear_acc[0];
