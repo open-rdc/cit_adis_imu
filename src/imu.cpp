@@ -188,16 +188,23 @@ public:
 
     void run() {
         double old_angular_z_deg = getImuData().angular_deg[2];
+        double angular_integral = 0;
         unsigned short abnormal_count = 0;
+        double secs,secs_tmp = 0.0;
+        secs = ros::Time::now().toSec();
+        secs_tmp = ros::Time::now().toSec();
 
         while (ros::ok()) {
             sensor_msgs::Imu output_msg;
             ImuData data = getImuData();
             output_msg.header.stamp = ros::Time::now();
-            
+         
+            angular_integral += getImuData().angular_vel[2] * (secs - secs_tmp);
+
             //ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
             //ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
             ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
+            ROS_INFO_STREAM("z_deg_int = " << angular_integral);
             
             if(!isInRange(std::abs(old_angular_z_deg), 180.0, 165.0) && !isInRange(std::abs(data.angular_deg[2]), 180.0, 165.0) &&
                 std::abs(old_angular_z_deg - data.angular_deg[2]) > 40 && abnormal_count < 4){
@@ -225,6 +232,9 @@ public:
 
             ros::spinOnce();
             //loop_rate.sleep();
+
+            secs_tmp = secs;
+            secs = ros::Time::now().toSec();
         }
     }
 };
