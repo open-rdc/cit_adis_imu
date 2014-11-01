@@ -46,11 +46,13 @@ struct ImuData {
 class IMU {
 private:
     ros::Publisher imu_pub_;
+    ros::Publisher imu_pub_inc;
     ros::ServiceServer reset_service_;
     ros::ServiceServer carivrate_service_;
     float geta;
     CComm usb;
     double gyro_unit;
+    double delta_ang_unit;
     double acc_unit;
     double init_angle;
     std::string port_name;
@@ -74,11 +76,11 @@ private:
         ROS_INFO_STREAM("recv = " << command2);
 
         memmove(temp,command2,4);
-        data.angular_deg[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
+        data.angular_deg[0] = ((short)strtol(temp, NULL, 16)) * delta_ang_unit;
         memmove(temp,command2+4,4);
-        data.angular_deg[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
+        data.angular_deg[1] = ((short)strtol(temp, NULL, 16)) * delta_ang_unit;
         memmove(temp,command2+8,4);
-        data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
+        data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * delta_ang_unit * z_axis_dir_;
 
         memmove(temp,command2+12,4);
         data.linear_acc[0] = ((short)strtol(temp, NULL, 16)) * acc_unit;
@@ -91,10 +93,10 @@ private:
         data.angular_vel[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
         memmove(temp,command2+28,4);
         data.angular_vel[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
-        memmove(temp,command2+30,4);
-        data.angular_vel[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
-
-        memmove(temp,command2+24,4);
+        memmove(temp,command2+32,4);
+        data.angular_vel[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
+        
+        memmove(temp,command2+36,4);
         data.temp = ((short)strtol(temp, NULL, 16)) * temp_unit + 25.0;
         
         //while(data.angular_deg[2] < -180) data.angular_deg[2] += 180;
@@ -133,14 +135,15 @@ public:
 
     IMU(ros::NodeHandle node) :
         imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 10)),
+        imu_pub_inc(node.advertise<sensor_msgs::Imu>("imu_inc",10)),
         reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
         carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
-        geta(0), gyro_unit(0.00836181640625), acc_unit(0.8), init_angle(0.0),
+        geta(0), gyro_unit(0.020001220703125),delta_ang_unit(0.00836181640625), acc_unit(0.8), init_angle(0.0),
         port_name("/dev/ttyUSB0"), baudrate(115200), loop_rate(50), z_axis_dir_(-1)
     {
         ros::NodeHandle private_nh("~");
         private_nh.getParam("port_name", port_name);
-        private_nh.param<double>("gyro_unit", gyro_unit, gyro_unit);
+        private_nh.param<double>("delta_ang_unit", delta_ang_unit, delta_ang_unit);
         private_nh.param<double>("acc_unit", acc_unit, acc_unit);
         private_nh.param<int>("baud_rate", baudrate, baudrate);
         private_nh.param<double>("init_angle", init_angle, init_angle);
@@ -175,14 +178,14 @@ public:
         //コンフィギュレーション リセット
         // if(m_reset == true){
         sprintf(command, "0");
-        usb.Send(command, strlen(command));	//送信
+        usb.Send(command, strlen(command));        //送信
         std::cout << "send = " << command << std::endl;
         sleep(1);
         std::cout << "Gyro 0 Reset" << std::endl;
         // }
         geta = 0;
-        usb.Recv(command2, 100);	//空読み バッファクリアが効かない？
-        usb.ClearRecvBuf();		//バッファクリア
+        usb.Recv(command2, 100);        //空読み バッファクリアが効かない？
+        usb.ClearRecvBuf();                //バッファクリア
         return true;
     }
 
@@ -196,10 +199,12 @@ public:
 
         while (ros::ok()) {
             sensor_msgs::Imu output_msg;
-	    old_time_sec = ros::Time::now().toSec();
+            sensor_msgs::Imu output_msg_inc;
+            old_time_sec = ros::Time::now().toSec();
             ImuData data = getImuData();
             output_msg.header.stamp = ros::Time::now();
-	    time_sec = ros::Time::now().toSec();
+            output_msg_inc.header.stamp = ros::Time::now();
+            time_sec = ros::Time::now().toSec();
          
             angular_integral += getImuData().angular_vel[2] * (time_sec - old_time_sec);
 
@@ -219,6 +224,7 @@ public:
                 abnormal_count = 0;
             }
 
+            output_msg_inc.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_integral));
             output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(data.angular_deg[2]));
             output_msg.linear_acceleration.x = data.linear_acc[0];
             output_msg.linear_acceleration.y = data.linear_acc[1];
@@ -229,6 +235,7 @@ public:
     
             //ROS_INFO_STREAM("temp = " << data.temp);
             
+            imu_pub_inc.publish(output_msg_inc);
             imu_pub_.publish(output_msg);
             old_angular_z_deg = data.angular_deg[2];
 
