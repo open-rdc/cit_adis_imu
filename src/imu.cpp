@@ -26,7 +26,7 @@ bool isInRange(T value, T max, T min){
 struct ImuData {
     double angular_deg[3];
     double linear_acc[3];
-    double angular_velocity[3];
+    double angular_vel[3];
     double temp;
 
     ImuData() : 
@@ -35,7 +35,7 @@ struct ImuData {
         for(int i=0; i < 2; i++){
             angular_deg[i] = 0;
             linear_acc[i] = 0;
-	    angular_velocity[i] = 0;
+            angular_vel[i] = 0;
         }
     }
 };
@@ -87,13 +87,12 @@ private:
         memmove(temp,command2+20,4);
         data.linear_acc[2] = init_angle + ((short)strtol(temp, NULL, 16)) * acc_unit ;
 
-	memmove(temp,command2+24,4);
-	data.angular_velocity[0] = ((short)strtol(temp, NULL, 16)) * acc_unit;
-	memmove(temp,command2+28,4);
-	data.angular_velocity[1] = ((short)strtol(temp, NULL, 16)) * acc_unit;
-
-	memmove(temp,command2+30,4);
-	data.angular_velocity[2] = ((short)strtol(temp, NULL, 16)) * acc_unit;
+        memmove(temp,command2+24,4);
+        data.angular_vel[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
+        memmove(temp,command2+28,4);
+        data.angular_vel[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
+        memmove(temp,command2+30,4);
+        data.angular_vel[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
 
         memmove(temp,command2+24,4);
         data.temp = ((short)strtol(temp, NULL, 16)) * temp_unit + 25.0;
@@ -176,7 +175,7 @@ public:
         //コンフィギュレーション リセット
         // if(m_reset == true){
         sprintf(command, "0");
-        usb.Send(command, strlen(command));			//送信
+        usb.Send(command, strlen(command));	//送信
         std::cout << "send = " << command << std::endl;
         sleep(1);
         std::cout << "Gyro 0 Reset" << std::endl;
@@ -215,11 +214,11 @@ public:
             output_msg.linear_acceleration.x = data.linear_acc[0];
             output_msg.linear_acceleration.y = data.linear_acc[1];
             output_msg.linear_acceleration.z = data.linear_acc[2];
-	    output_msg.angular_velocity.x = data.angular_velocity[0];
-	    output_msg.angular_velocity.y = data.angular_velocity[1];
-	    output_msg.angular_velocity.z = data.angular_velocity[2];
-	    
-	    //ROS_INFO_STREAM("temp = " << data.temp);
+            output_msg.angular_velocity.x = data.angular_vel[0];
+            output_msg.angular_velocity.y = data.angular_vel[1];
+            output_msg.angular_velocity.z = data.angular_vel[2];
+    
+            //ROS_INFO_STREAM("temp = " << data.temp);
             
             imu_pub_.publish(output_msg);
             old_angular_z_deg = data.angular_deg[2];
