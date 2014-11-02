@@ -63,6 +63,8 @@ private:
         char command[2] = {0};
         char command2[50] = {0};
         char temp[6];
+	unsigned long int sum = 0;
+	
         const float temp_unit = 0.00565;
         
         sprintf(command, "o");
@@ -74,29 +76,24 @@ private:
         ROS_INFO_STREAM("recv = " << command2);
 
         memmove(temp,command2,4);
+	sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
         memmove(temp,command2+4,4);
+	sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
         memmove(temp,command2+8,4);
+	sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
 
-        memmove(temp,command2+12,4);
-        data.linear_acc[0] = ((short)strtol(temp, NULL, 16)) * acc_unit;
-        memmove(temp,command2+16,4);
-        data.linear_acc[1] = ((short)strtol(temp, NULL, 16)) * acc_unit;
-        memmove(temp,command2+20,4);
-        data.linear_acc[2] = init_angle + ((short)strtol(temp, NULL, 16)) * acc_unit ;
-
-        memmove(temp,command2+24,4);
-        data.angular_vel[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
-        memmove(temp,command2+28,4);
-        data.angular_vel[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
-        memmove(temp,command2+30,4);
-        data.angular_vel[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
-
-        memmove(temp,command2+24,4);
-        data.temp = ((short)strtol(temp, NULL, 16)) * temp_unit + 25.0;
-        
+	memmove(temp,command2+12,4);
+	
+	if( sum != ((short)strtol(temp,NULL,16)))
+	{
+		//throw "Exception: Invalid IMU Data\n";
+		ROS_WARN_STREAM("Invaid IMU Data:"<<command2);
+		ROS_WARN_STREAM("Recv Checksum:"<<((short)strtol(temp,NULL,16)));
+		ROS_WARN_STREAM("Calculate Checksum:"<<sum);
+	}
         //while(data.angular_deg[2] < -180) data.angular_deg[2] += 180;
         //while(data.angular_deg[2] > 180) data.angular_deg[2] -= 180;
 
