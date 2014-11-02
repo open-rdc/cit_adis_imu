@@ -14,6 +14,16 @@
 
 #include <sensor_msgs/Imu.h>
 
+#include <stdexcept>
+
+class CheckSumError : public std::logic_error { 
+public:
+    CheckSumError(const std::string &data) : 
+        std::logic_error("Received the Invalid IMU Data: " + data)
+    {
+    }
+};
+
 float deg_to_rad(float deg) {
     return deg / 180.0f * M_PI;
 }
@@ -25,17 +35,10 @@ bool isInRange(T value, T max, T min){
 
 struct ImuData {
     double angular_deg[3];
-    double linear_acc[3];
-    double angular_vel[3];
-    double temp;
-
-    ImuData() : 
-        temp(0)
-    {
+    
+    ImuData(){
         for(int i=0; i < 2; i++){
             angular_deg[i] = 0;
-            linear_acc[i] = 0;
-            angular_vel[i] = 0;
         }
     }
 };
@@ -63,6 +66,8 @@ private:
         char command[2] = {0};
         char command2[50] = {0};
         char temp[6];
+        unsigned long int sum = 0;
+        
         const float temp_unit = 0.00565;
         
         sprintf(command, "o");
@@ -74,29 +79,22 @@ private:
         ROS_INFO_STREAM("recv = " << command2);
 
         memmove(temp,command2,4);
+        sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
         memmove(temp,command2+4,4);
+        sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
         memmove(temp,command2+8,4);
+        sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
 
         memmove(temp,command2+12,4);
-        data.linear_acc[0] = ((short)strtol(temp, NULL, 16)) * acc_unit;
-        memmove(temp,command2+16,4);
-        data.linear_acc[1] = ((short)strtol(temp, NULL, 16)) * acc_unit;
-        memmove(temp,command2+20,4);
-        data.linear_acc[2] = init_angle + ((short)strtol(temp, NULL, 16)) * acc_unit ;
-
-        memmove(temp,command2+24,4);
-        data.angular_vel[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
-        memmove(temp,command2+28,4);
-        data.angular_vel[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
-        memmove(temp,command2+32,4);
-        data.angular_vel[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
-
-        memmove(temp,command2+36,4);
-        data.temp = ((short)strtol(temp, NULL, 16)) * temp_unit + 25.0;
         
+        if(sum != ((short)strtol(temp, NULL, 16))){
+            ROS_ERROR_STREAM("Recv Checksum: " << ((short)strtol(temp, NULL, 16)));
+            ROS_ERROR_STREAM("Calculate Checksum: " << sum);
+            throw CheckSumError(command2);
+        }
         //while(data.angular_deg[2] < -180) data.angular_deg[2] += 180;
         //while(data.angular_deg[2] > 180) data.angular_deg[2] -= 180;
 
@@ -175,53 +173,54 @@ public:
         //コンフィギュレーション リセット
         // if(m_reset == true){
         sprintf(command, "0");
-        usb.Send(command, strlen(command));	//送信
+        usb.Send(command, strlen(command));        //送信
         std::cout << "send = " << command << std::endl;
         sleep(1);
         std::cout << "Gyro 0 Reset" << std::endl;
         // }
         geta = 0;
-        usb.Recv(command2, 100);	//空読み バッファクリアが効かない？
-        usb.ClearRecvBuf();		//バッファクリア
+        usb.Recv(command2, 100);        //空読み バッファクリアが効かない？
+        usb.ClearRecvBuf();                //バッファクリア
         return true;
     }
 
     void run() {
         double old_angular_z_deg = getImuData().angular_deg[2];
+        double angular_z_deg = 0;
         unsigned short abnormal_count = 0;
 
         while (ros::ok()) {
             sensor_msgs::Imu output_msg;
-            ImuData data = getImuData();
-            output_msg.header.stamp = ros::Time::now();
-            
-            //ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
-            //ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
-            ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
-            
-            if(!isInRange(std::abs(old_angular_z_deg), 180.0, 165.0) && !isInRange(std::abs(data.angular_deg[2]), 180.0, 165.0) &&
-                std::abs(old_angular_z_deg - data.angular_deg[2]) > 40 && abnormal_count < 4){
+            try{
+                ImuData data = getImuData();
+                output_msg.header.stamp = ros::Time::now();
                 
-                ROS_WARN_STREAM("Angle change too large: z = " << data.angular_deg[2]);
-                ROS_WARN_STREAM("old_z = " << old_angular_z_deg);
-                data.angular_deg[2] = old_angular_z_deg;
-                abnormal_count++;
-            }else{
-                abnormal_count = 0;
-            }
+                //ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
+                //ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
+                ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
+                
+                if(!isInRange(std::abs(old_angular_z_deg), 180.0, 165.0) && !isInRange(std::abs(data.angular_deg[2]), 180.0, 165.0) &&
+                    std::abs(old_angular_z_deg - data.angular_deg[2]) > 40 && abnormal_count < 4){
+                    
+                    ROS_WARN_STREAM("Angle change too large: z = " << data.angular_deg[2]);
+                    ROS_WARN_STREAM("old_z = " << old_angular_z_deg);
+                    angular_z_deg = old_angular_z_deg;
+                    abnormal_count++;
+                }else{
+                    abnormal_count = 0;
+                    angular_z_deg = data.angular_deg[2];
+                }
 
-            output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(data.angular_deg[2]));
-            output_msg.linear_acceleration.x = data.linear_acc[0];
-            output_msg.linear_acceleration.y = data.linear_acc[1];
-            output_msg.linear_acceleration.z = data.linear_acc[2];
-            output_msg.angular_velocity.x = data.angular_vel[0];
-            output_msg.angular_velocity.y = data.angular_vel[1];
-            output_msg.angular_velocity.z = data.angular_vel[2];
-    
-            //ROS_INFO_STREAM("temp = " << data.temp);
+            }catch(const CheckSumError &e){
+                output_msg.header.stamp = ros::Time::now();
+                ROS_ERROR_STREAM(e.what());
+                angular_z_deg = old_angular_z_deg;
+            }
             
+            output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
+                
             imu_pub_.publish(output_msg);
-            old_angular_z_deg = data.angular_deg[2];
+            old_angular_z_deg = angular_z_deg;
 
             ros::spinOnce();
             //loop_rate.sleep();
