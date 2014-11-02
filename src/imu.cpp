@@ -91,10 +91,10 @@ private:
         data.angular_vel[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
         memmove(temp,command2+28,4);
         data.angular_vel[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
-        memmove(temp,command2+30,4);
+        memmove(temp,command2+32,4);
         data.angular_vel[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
 
-        memmove(temp,command2+24,4);
+        memmove(temp,command2+36,4);
         data.temp = ((short)strtol(temp, NULL, 16)) * temp_unit + 25.0;
         
         //while(data.angular_deg[2] < -180) data.angular_deg[2] += 180;
