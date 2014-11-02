@@ -25,17 +25,10 @@ bool isInRange(T value, T max, T min){
 
 struct ImuData {
     double angular_deg[3];
-    double linear_acc[3];
-    double angular_vel[3];
-    double temp;
-
-    ImuData() : 
-        temp(0)
-    {
+    
+    ImuData(){
         for(int i=0; i < 2; i++){
             angular_deg[i] = 0;
-            linear_acc[i] = 0;
-            angular_vel[i] = 0;
         }
     }
 };
@@ -208,13 +201,7 @@ public:
             }
 
             output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(data.angular_deg[2]));
-            output_msg.linear_acceleration.x = data.linear_acc[0];
-            output_msg.linear_acceleration.y = data.linear_acc[1];
-            output_msg.linear_acceleration.z = data.linear_acc[2];
-            output_msg.angular_velocity.x = data.angular_vel[0];
-            output_msg.angular_velocity.y = data.angular_vel[1];
-            output_msg.angular_velocity.z = data.angular_vel[2];
-    
+                
             //ROS_INFO_STREAM("temp = " << data.temp);
             
             imu_pub_.publish(output_msg);
