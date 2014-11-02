@@ -63,8 +63,8 @@ private:
         char command[2] = {0};
         char command2[50] = {0};
         char temp[6];
-	unsigned long int sum = 0;
-	
+        unsigned long int sum = 0;
+        
         const float temp_unit = 0.00565;
         
         sprintf(command, "o");
@@ -76,24 +76,24 @@ private:
         ROS_INFO_STREAM("recv = " << command2);
 
         memmove(temp,command2,4);
-	sum = sum ^ ((short)strtol(temp, NULL, 16));
+        sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
         memmove(temp,command2+4,4);
-	sum = sum ^ ((short)strtol(temp, NULL, 16));
+        sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
         memmove(temp,command2+8,4);
-	sum = sum ^ ((short)strtol(temp, NULL, 16));
+        sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
 
-	memmove(temp,command2+12,4);
-	
-	if( sum != ((short)strtol(temp,NULL,16)))
-	{
-		//throw "Exception: Invalid IMU Data\n";
-		ROS_WARN_STREAM("Invaid IMU Data:"<<command2);
-		ROS_WARN_STREAM("Recv Checksum:"<<((short)strtol(temp,NULL,16)));
-		ROS_WARN_STREAM("Calculate Checksum:"<<sum);
-	}
+        memmove(temp,command2+12,4);
+        
+        if( sum != ((short)strtol(temp,NULL,16)))
+        {
+                //throw "Exception: Invalid IMU Data\n";
+                ROS_WARN_STREAM("Invaid IMU Data:"<<command2);
+                ROS_WARN_STREAM("Recv Checksum:"<<((short)strtol(temp,NULL,16)));
+                ROS_WARN_STREAM("Calculate Checksum:"<<sum);
+        }
         //while(data.angular_deg[2] < -180) data.angular_deg[2] += 180;
         //while(data.angular_deg[2] > 180) data.angular_deg[2] -= 180;
 
@@ -172,14 +172,14 @@ public:
         //コンフィギュレーション リセット
         // if(m_reset == true){
         sprintf(command, "0");
-        usb.Send(command, strlen(command));	//送信
+        usb.Send(command, strlen(command));        //送信
         std::cout << "send = " << command << std::endl;
         sleep(1);
         std::cout << "Gyro 0 Reset" << std::endl;
         // }
         geta = 0;
-        usb.Recv(command2, 100);	//空読み バッファクリアが効かない？
-        usb.ClearRecvBuf();		//バッファクリア
+        usb.Recv(command2, 100);        //空読み バッファクリアが効かない？
+        usb.ClearRecvBuf();                //バッファクリア
         return true;
     }
 
