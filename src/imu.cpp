@@ -72,8 +72,7 @@ private:
         
         sprintf(command, "o");
         usb.Send(command, strlen(command));
-        //usleep(30000);
-        ros::Duration(0.03).sleep();
+        ros::Duration(0.04).sleep();
         
         usb.Recv(command2, 50);
         ROS_INFO_STREAM("recv = " << command2);
