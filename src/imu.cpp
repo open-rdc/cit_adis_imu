@@ -72,8 +72,7 @@ private:
         
         sprintf(command, "o");
         usb.Send(command, strlen(command));
-        //usleep(30000);
-        ros::Duration(0.03).sleep();
+        ros::Duration(0.04).sleep();
         
         usb.Recv(command2, 50);
         ROS_INFO_STREAM("recv = " << command2);
@@ -204,8 +203,8 @@ public:
                     
                     ROS_WARN_STREAM("Angle change too large: z = " << data.angular_deg[2]);
                     ROS_WARN_STREAM("old_z = " << old_angular_z_deg);
-                    angular_z_deg = old_angular_z_deg;
                     abnormal_count++;
+                    continue;
                 }else{
                     abnormal_count = 0;
                     angular_z_deg = data.angular_deg[2];
@@ -214,7 +213,7 @@ public:
             }catch(const CheckSumError &e){
                 output_msg.header.stamp = ros::Time::now();
                 ROS_ERROR_STREAM(e.what());
-                angular_z_deg = old_angular_z_deg;
+                continue;
             }
             
             output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
