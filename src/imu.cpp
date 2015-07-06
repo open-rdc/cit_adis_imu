@@ -13,6 +13,7 @@
 #include "Comm.h"
 
 #include <sensor_msgs/Imu.h>
+#include <sensor_msgs/Temperature.h>
 
 #include <stdexcept>
 
@@ -35,11 +36,13 @@ bool isInRange(T value, T max, T min){
 
 struct ImuData {
     double angular_deg[3];
+    double temperature;
     
     ImuData(){
         for(int i=0; i < 2; i++){
             angular_deg[i] = 0;
         }
+        temperature = 0;
     }
 };
 
@@ -49,6 +52,7 @@ struct ImuData {
 class IMU {
 private:
     ros::Publisher imu_pub_;
+    ros::Publisher imu_temp_;
     ros::ServiceServer reset_service_;
     ros::ServiceServer carivrate_service_;
     float geta;
@@ -88,7 +92,8 @@ private:
         data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
 
         memmove(temp,command2+12,4);
-        
+        data.temperature = ((short)strtol(temp,NULL,16));
+
         if(sum != ((short)strtol(temp, NULL, 16))){
             ROS_ERROR_STREAM("Recv Checksum: " << ((short)strtol(temp, NULL, 16)));
             ROS_ERROR_STREAM("Calculate Checksum: " << sum);
@@ -130,6 +135,7 @@ public:
 
     IMU(ros::NodeHandle node) :
         imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 10)),
+        imu_temp_(node.advertise<sensor_msgs::Temperature>("imu_temp",10)),
         reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
         carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
         geta(0), gyro_unit(0.00836181640625), acc_unit(0.8), init_angle(0.0),
@@ -186,10 +192,12 @@ public:
     void run() {
         double old_angular_z_deg = getImuData().angular_deg[2];
         double angular_z_deg = 0;
+        double temperature = 0;
         unsigned short abnormal_count = 0;
 
         while (ros::ok()) {
             sensor_msgs::Imu output_msg;
+            sensor_msgs::Temperature output_temp;
             try{
                 ImuData data = getImuData();
                 output_msg.header.stamp = ros::Time::now();
@@ -198,6 +206,8 @@ public:
                 //ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
                 ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
                 
+                output_temp.temperature = data.temperature;
+
                 if(!isInRange(std::abs(old_angular_z_deg), 180.0, 165.0) && !isInRange(std::abs(data.angular_deg[2]), 180.0, 165.0) &&
                     std::abs(old_angular_z_deg - data.angular_deg[2]) > 40 && abnormal_count < 4){
                     
@@ -219,6 +229,7 @@ public:
             output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
                 
             imu_pub_.publish(output_msg);
+            imu_temp_.publish(output_temp);
             old_angular_z_deg = angular_z_deg;
 
             ros::spinOnce();
