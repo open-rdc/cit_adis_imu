@@ -72,7 +72,7 @@ private:
         char temp[6];
         unsigned long int sum = 0;
         
-        const float temp_unit = 0.00565;
+        const float temp_unit = 0.0565;
         
         sprintf(command, "o");
         usb.Send(command, strlen(command));
@@ -92,8 +92,6 @@ private:
         data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
 
         memmove(temp,command2+12,4);
-        data.temperature = ((short)strtol(temp,NULL,16));
-
         if(sum != ((short)strtol(temp, NULL, 16))){
             ROS_ERROR_STREAM("Recv Checksum: " << ((short)strtol(temp, NULL, 16)));
             ROS_ERROR_STREAM("Calculate Checksum: " << sum);
@@ -102,6 +100,9 @@ private:
         //while(data.angular_deg[2] < -180) data.angular_deg[2] += 180;
         //while(data.angular_deg[2] > 180) data.angular_deg[2] -= 180;
 
+        memmove(temp,command2+16,4);
+        data.temperature = ((unsigned short int)strtol(temp,NULL,16)) * temp_unit;
+        
         return data;
     }
 
