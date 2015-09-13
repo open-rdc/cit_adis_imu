@@ -72,7 +72,7 @@ private:
         char temp[6];
         unsigned long int sum = 0;
         
-        const float temp_unit = 0.0565;
+        const float temp_unit = 0.000565;
         
         sprintf(command, "o");
         usb.Send(command, strlen(command));
