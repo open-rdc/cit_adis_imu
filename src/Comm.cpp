@@ -7,16 +7,16 @@
 
 // CComm
 
-CComm::CComm() :
-	com_port(0) {
-
+CComm::CComm(const std::string com_port, int baudrate = DEFAULT_BAUDRATE) {
+	com_port_ = com_port;
+	baudrate_ = baudrate;
 }
 
 CComm::~CComm() {
 }
 
-speed_t CComm::Bitrate(int aBR) {
-	switch (aBR) {
+speed_t CComm::Bitrate() {
+	switch (baudrate_) {
 	case 9600:
 		return B9600;
 
@@ -46,11 +46,11 @@ speed_t CComm::Bitrate(int aBR) {
 	}
 }
 
-bool CComm::setupComm(int aFd, int aSpeed){
+bool CComm::setupComm(int aFd){
 	int speed;
 	struct termios tio;
 
-	speed=Bitrate(aSpeed);
+	speed=Bitrate();
 	if(speed==0)
 		return false;  // invalid bitrate
 
@@ -88,22 +88,18 @@ bool CComm::setupComm(int aFd, int aSpeed){
 }
 
 // 通信開始時には，必ず実行する
-bool CComm::Open(char* port, int baudrate) {
-	// 通信用初期設定
-	char port_name[128];
-	//strcpy(port_name, port);
-	sprintf(port_name, "%s", port);
-	fd=open(port_name,O_RDWR | O_NOCTTY);
+bool CComm::Open() {
+	fd=open(com_port_.c_str(),O_RDWR | O_NOCTTY);
+	
+	std::cout << fd << std::endl;
 
 	if(fd < 0){
-		std::cerr << "Can not Open " << port_name << "." << std::endl;
+		std::cerr << "Can not Open " << com_port_ << "." << std::endl;
 		return false;  // invalid device file
 	}
 
-	//com_port = port;
-
 	// setup parameters
-	if(setupComm(fd,baudrate)){
+	if(setupComm(fd)){
 		return true; // 正常終了
 	}
 	else {
@@ -116,6 +112,14 @@ bool CComm::Open(char* port, int baudrate) {
 // 通信終了時には，必ず実行する
 bool CComm::Close(void) {
 	close(fd);
+	return true;
+}
+
+bool CComm::Reopen(void) {
+	close(fd);
+	while(!CComm::Open()) {
+		std::cerr << "reconnecting" << std::endl;
+	}
 	return true;
 }
 
