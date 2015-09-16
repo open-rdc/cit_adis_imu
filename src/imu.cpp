@@ -202,23 +202,23 @@ public:
                 		std::cerr << "reconnecting" << std::endl;
                 	}
                 }else{
-	                output_msg.header.stamp = ros::Time::now();
-	                
-	                //ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
-	                //ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
-	                ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
-	                
-	                if(!isInRange(std::abs(old_angular_z_deg), 180.0, 165.0) && !isInRange(std::abs(data.angular_deg[2]), 180.0, 165.0) &&
-	                    std::abs(old_angular_z_deg - data.angular_deg[2]) > 40 && abnormal_count < 4){
-	                    
-	                    ROS_WARN_STREAM("Angle change too large: z = " << data.angular_deg[2]);
-	                    ROS_WARN_STREAM("old_z = " << old_angular_z_deg);
-	                    abnormal_count++;
-	                    continue;
-	                }else{
-	                    abnormal_count = 0;
-	                    angular_z_deg = data.angular_deg[2];
-	                }
+                  output_msg.header.stamp = ros::Time::now();
+                  
+                  //ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
+                  //ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
+                  ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
+                  
+                  if(!isInRange(std::abs(old_angular_z_deg), 180.0, 165.0) && !isInRange(std::abs(data.angular_deg[2]), 180.0, 165.0) &&
+                      std::abs(old_angular_z_deg - data.angular_deg[2]) > 40 && abnormal_count < 4){
+                      
+                      ROS_WARN_STREAM("Angle change too large: z = " << data.angular_deg[2]);
+                      ROS_WARN_STREAM("old_z = " << old_angular_z_deg);
+                      abnormal_count++;
+                      continue;
+                  }else{
+                      abnormal_count = 0;
+                      angular_z_deg = data.angular_deg[2];
+                  }
                   output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
                   imu_pub_.publish(output_msg);
                   old_angular_z_deg = angular_z_deg;
