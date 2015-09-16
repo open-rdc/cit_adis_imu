@@ -63,8 +63,6 @@ public:
 	 * @return 送信したバイト数
 	 */
 
-	bool Reopen(void);
-
 	int Send(char *data, int len = 0);
 
 	/** データを送信する

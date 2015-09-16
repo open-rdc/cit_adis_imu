@@ -115,14 +115,6 @@ bool CComm::Close(void) {
 	return true;
 }
 
-bool CComm::Reopen(void) {
-	close(fd);
-	while(!CComm::Open()) {
-		std::cerr << "reconnecting" << std::endl;
-	}
-	return true;
-}
-
 // データをlenだけ送信する．
 // 戻り値: lenと同じ数の時は正常終了，-1:エラー
 int CComm::Send(char *data, int len) {
