@@ -197,10 +197,10 @@ public:
             try{
                 ImuData data = getImuData();
                 if (data.flag == false){
-                	usb->Close();
-                	if(!usb->Open()) {
-                		std::cerr << "reconnecting" << std::endl;
-                	}
+                  usb->Close();
+                  if(!usb->Open()) {
+                  	std::cerr << "reconnecting" << std::endl;
+                  }
                 }else{
                   output_msg.header.stamp = ros::Time::now();
                   
