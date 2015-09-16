@@ -79,9 +79,9 @@ private:
         ROS_INFO_STREAM("recv = " << command2);
 
 				if (command2[0] == '\0') {
-					data.flag = false;
-					return data;
-				}
+ 					data.flag = false;
+ 					return data;
+ 				}
 				data.flag = true;
 
         memmove(temp,command2,4);
@@ -198,11 +198,11 @@ public:
                 ImuData data = getImuData();
 
 								if (data.flag == false){
-									usb->Close();
-									if(!usb->Open()) {
-										std::cerr << "reconnecting" << std::endl;
-									}
-								}
+ 									usb->Close();
+ 									if(!usb->Open()) {
+ 										std::cerr << "reconnecting" << std::endl;
+ 									}
+ 								}
 								else{
 	                output_msg.header.stamp = ros::Time::now();
 	                
@@ -221,9 +221,9 @@ public:
 	                    abnormal_count = 0;
 	                    angular_z_deg = data.angular_deg[2];
 	                }
-									output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
-									imu_pub_.publish(output_msg);
-									old_angular_z_deg = angular_z_deg;
+                  output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
+                  imu_pub_.publish(output_msg);
+                  old_angular_z_deg = angular_z_deg;
 							}
             }catch(const CheckSumError &e){
                 output_msg.header.stamp = ros::Time::now();
