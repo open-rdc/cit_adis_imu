@@ -19,18 +19,20 @@
 class CComm
 {
 private:
-	int com_port;
+	// int com_port;
 	int fd;
+	std::string com_port_;
+	int baudrate_;
 
 public:
-	CComm();
+	CComm(const std::string com_port, int baudrate);
 	virtual ~CComm();
 
 	/** 設定用のビットレートを出力する
 	* @param[in] baudrate ビットレート
 	* @return bitrate
 	*/
-	speed_t Bitrate(int aBR);
+	speed_t Bitrate();
 
 	//! シリアルポートの通信パラメータを設定する
 	/*!
@@ -41,14 +43,14 @@ public:
 	  @retval false 失敗
 	  @retval true 成功
 	 */
-	bool setupComm(int aFd, int aSpeed);
+	bool setupComm(int aFd);
 
 	/** COMポートを開く
 	* @param[in] port ポート番号
 	* @param[in] baudrate ビットレート
 	* @return 成功の場合は真
 	*/
-	bool Open(char* port, int baudrate = DEFAULT_BAUDRATE);
+	bool Open();
 
 	/** COMポートを閉じる
 	 * @return 成功の場合は真
@@ -60,6 +62,7 @@ public:
 	 * @param[in] len データの長さ
 	 * @return 送信したバイト数
 	 */
+
 	int Send(char *data, int len = 0);
 
 	/** データを送信する
