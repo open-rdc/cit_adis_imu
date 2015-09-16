@@ -222,7 +222,7 @@ public:
                   output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
                   imu_pub_.publish(output_msg);
                   old_angular_z_deg = angular_z_deg;
-								}
+                  }
             }catch(const CheckSumError &e){
                 output_msg.header.stamp = ros::Time::now();
                 ROS_ERROR_STREAM(e.what());
