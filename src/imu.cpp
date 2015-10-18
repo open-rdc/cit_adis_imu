@@ -222,7 +222,7 @@ public:
                   }
                   //output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
                   
-		  q = tf::createQuaternionFromRPY(deg_to_rad(data.angular_deg[0]),deg_to_rad(data.angular_deg[1]),deg_to_rad(angular_z_deg));
+		  q = tf::createQuaternionFromRPY(deg_to_rad(data.angular_deg[0]),deg_to_rad(-data.angular_deg[1]),deg_to_rad(angular_z_deg));
 		  tf::quaternionTFToMsg(q, output_msg.orientation);
 		  imu_pub_.publish(output_msg);
                   old_angular_z_deg = angular_z_deg;
