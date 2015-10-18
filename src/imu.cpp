@@ -193,7 +193,8 @@ public:
         unsigned short abnormal_count = 0;
 
         while (ros::ok()) {
-            sensor_msgs::Imu output_msg;
+            tf::Quaternion q;
+	    sensor_msgs::Imu output_msg;
             try{
                 ImuData data = getImuData();
                 if (data.flag == false){
@@ -204,8 +205,8 @@ public:
                 }else{
                   output_msg.header.stamp = ros::Time::now();
                   
-                  //ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
-                  //ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
+                  ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
+                  ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
                   ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
                   
                   if(!isInRange(std::abs(old_angular_z_deg), 180.0, 165.0) && !isInRange(std::abs(data.angular_deg[2]), 180.0, 165.0) &&
@@ -219,8 +220,11 @@ public:
                       abnormal_count = 0;
                       angular_z_deg = data.angular_deg[2];
                   }
-                  output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
-                  imu_pub_.publish(output_msg);
+                  //output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
+                  
+		  q = tf::createQuaternionFromRPY(deg_to_rad(data.angular_deg[0]),deg_to_rad(data.angular_deg[1]),deg_to_rad(angular_z_deg));
+		  tf::quaternionTFToMsg(q, output_msg.orientation);
+		  imu_pub_.publish(output_msg);
                   old_angular_z_deg = angular_z_deg;
                   }
             }catch(const CheckSumError &e){
