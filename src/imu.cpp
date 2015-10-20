@@ -194,44 +194,45 @@ public:
 
         while (ros::ok()) {
             tf::Quaternion q;
-	    sensor_msgs::Imu output_msg;
+            sensor_msgs::Imu output_msg;
             try{
                 ImuData data = getImuData();
                 if (data.flag == false){
-                  usb->Close();
-                  if(!usb->Open()) {
-                  	std::cerr << "reconnecting" << std::endl;
-                  }
+                    usb->Close();
+                    if(!usb->Open()) {
+                        std::cerr << "reconnecting" << std::endl;
+                    }
                 }else{
-                  output_msg.header.stamp = ros::Time::now();
-                  
-                  ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
-                  ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
-                  ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
-                  
-                  if(!isInRange(std::abs(old_angular_z_deg), 180.0, 165.0) && !isInRange(std::abs(data.angular_deg[2]), 180.0, 165.0) &&
-                      std::abs(old_angular_z_deg - data.angular_deg[2]) > 40 && abnormal_count < 4){
+                    output_msg.header.stamp = ros::Time::now();
                       
-                      ROS_WARN_STREAM("Angle change too large: z = " << data.angular_deg[2]);
-                      ROS_WARN_STREAM("old_z = " << old_angular_z_deg);
-                      abnormal_count++;
-                      continue;
-                  }else{
-                      abnormal_count = 0;
-                      angular_z_deg = data.angular_deg[2];
-                  }
-                  //output_msg.orientation = tf::createQuaternionMsgFromYaw(deg_to_rad(angular_z_deg));
-                  
-		  q = tf::createQuaternionFromRPY(deg_to_rad(data.angular_deg[0]),deg_to_rad(-data.angular_deg[1]),deg_to_rad(angular_z_deg));
-		  tf::quaternionTFToMsg(q, output_msg.orientation);
-		  imu_pub_.publish(output_msg);
-                  old_angular_z_deg = angular_z_deg;
-                  }
+                    ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
+                    ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
+                    ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
+                      
+                    if(!isInRange(std::abs(old_angular_z_deg), 180.0, 165.0) && !isInRange(std::abs(data.angular_deg[2]), 180.0, 165.0) &&
+                        std::abs(old_angular_z_deg - data.angular_deg[2]) > 40 && abnormal_count < 4){
+                        
+                        ROS_WARN_STREAM("Angle change too large: z = " << data.angular_deg[2]);
+                        ROS_WARN_STREAM("old_z = " << old_angular_z_deg);
+                        abnormal_count++;
+                        continue;
+                    }else{
+                        abnormal_count = 0;
+                        angular_z_deg = data.angular_deg[2];
+                    }
+                    
+                    q = tf::createQuaternionFromRPY(deg_to_rad(data.angular_deg[0]), deg_to_rad(-data.angular_deg[1]), deg_to_rad(angular_z_deg));
+                    tf::quaternionTFToMsg(q, output_msg.orientation);
+                    imu_pub_.publish(output_msg);
+                    old_angular_z_deg = angular_z_deg;
+
+                }
             }catch(const CheckSumError &e){
                 output_msg.header.stamp = ros::Time::now();
                 ROS_ERROR_STREAM(e.what());
                 continue;
             }
+            
             ros::spinOnce();
             //loop_rate.sleep();
         }
@@ -245,5 +246,6 @@ int main(int argc, char * argv[])
     IMU imu(node);
     if(!imu.init()) return 1;
     imu.run();
+    
     return 0;
 }
