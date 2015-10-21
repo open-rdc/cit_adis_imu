@@ -241,7 +241,7 @@ public:
 
 int main(int argc, char * argv[])
 {
-    ros::init(argc, argv, "imu");
+    ros::init(argc, argv, "imu_node");
     ros::NodeHandle node;
     IMU imu(node);
     if(!imu.init()) return 1;
