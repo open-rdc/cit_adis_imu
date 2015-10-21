@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(imu)
+project(cit_adis_imu)
 
 find_package(catkin REQUIRED COMPONENTS
     geometry_msgs
