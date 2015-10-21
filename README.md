@@ -1,4 +1,4 @@
-adis_imu_drivers
+cit_adis_imu
 ================
 
 [![Build Status](https://travis-ci.org/open-rdc/adis_imu_drivers.svg?branch=indigo-devel)](https://travis-ci.org/open-rdc/adis_imu_drivers)
