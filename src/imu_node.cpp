@@ -9,10 +9,10 @@
 
 #include <sys/time.h>
 
-#include "imu/bool_msg.h"
 #include "Comm.h"
 
 #include <sensor_msgs/Imu.h>
+#include <std_srvs/Trigger.h>
 
 #include <stdexcept>
 
@@ -108,30 +108,36 @@ private:
     }
 
 public:
-    bool resetCallback(imu::bool_msg::Request  &req, 
-            imu::bool_msg::Response &res) 
+    bool resetCallback(std_srvs::Trigger::Request  &req, 
+            std_srvs::Trigger::Response &res) 
     {
         char command[2] = {0};
         sprintf(command, "0");
         usb->Send(command, strlen(command));
         sleep(1);
         std::cout << "Gyro 0 Reset" << std::endl;
+        res.success = true;
+        res.message = "Successful reset angle, gyro angle be zero right now.";
+
         return true;
     }
     
-    bool caribrateCallback(imu::bool_msg::Request  &req, 
-            imu::bool_msg::Response &res) 
+    bool caribrateCallback(std_srvs::Trigger::Request  &req, 
+            std_srvs::Trigger::Response &res) 
     {
         char command[2] = {0};
         std::cout << "Calibration" << std::endl;
         sprintf(command, "a");
         usb->Send(command, strlen(command));
-        std::cout << "Caribrate start ";
+        std::cout << "Calibrate start ";
         for(int i=0; i<8; ++i) {
             std::cout << ". ";
             sleep(1);
         }
         std::cout << "finish." << std::endl;
+        res.success = true;
+        res.message = "ADIS driver done with calibration.";
+
         return true;
     }
 
@@ -149,7 +155,7 @@ public:
         private_nh.param<int>("baud_rate", baudrate, baudrate);
         private_nh.param<double>("init_angle", init_angle, init_angle);
         private_nh.param<int>("z_axis_dir", z_axis_dir_, z_axis_dir_);
-				usb = new CComm(port_name, baudrate);
+        usb = new CComm(port_name, baudrate);
     }
 
     bool init() {
@@ -241,7 +247,7 @@ public:
 
 int main(int argc, char * argv[])
 {
-    ros::init(argc, argv, "imu");
+    ros::init(argc, argv, "imu_node");
     ros::NodeHandle node;
     IMU imu(node);
     if(!imu.init()) return 1;
