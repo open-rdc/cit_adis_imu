@@ -44,21 +44,18 @@ struct ImuData {
     }
 };
 
-
 // 角度ごとにURGのデータを送信するためのサービス
-// 要求があったときに，URGのデータを別のトピックに送信するだけ
 class IMU {
 private:
     ros::Publisher imu_pub_;
     ros::ServiceServer reset_service_;
     ros::ServiceServer carivrate_service_;
-    CComm* usb;
-    double gyro_unit;
-    double acc_unit;
-    double init_angle;
-    std::string port_name;
-    int   baudrate;
-    ros::Rate loop_rate;
+    CComm* usb_;
+    double gyro_unit_;
+    double acc_unit_;
+    std::string port_name_;
+    int   baudrate_;
+    ros::Rate loop_rate_;
     int  z_axis_dir_;
 
     ImuData getImuData(){
@@ -71,10 +68,10 @@ private:
         const float temp_unit = 0.00565;
         
         sprintf(command, "o");
-        usb->Send(command, strlen(command));
+        usb_->Send(command, strlen(command));
         ros::Duration(0.03).sleep();
         
-        usb->Recv(command2, 50);
+        usb_->Recv(command2, 50);
         ROS_INFO_STREAM("recv = " << command2);
 
         if (command2[0] == '\0') {
@@ -85,13 +82,13 @@ private:
 
         memmove(temp,command2,4);
         sum = sum ^ ((short)strtol(temp, NULL, 16));
-        data.angular_deg[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
+        data.angular_deg[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit_;
         memmove(temp,command2+4,4);
         sum = sum ^ ((short)strtol(temp, NULL, 16));
-        data.angular_deg[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit;
+        data.angular_deg[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit_;
         memmove(temp,command2+8,4);
         sum = sum ^ ((short)strtol(temp, NULL, 16));
-        data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit * z_axis_dir_;
+        data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit_ * z_axis_dir_;
 
         memmove(temp,command2+12,4);
         
@@ -112,7 +109,7 @@ public:
     {
         char command[2] = {0};
         sprintf(command, "0");
-        usb->Send(command, strlen(command));
+        usb_->Send(command, strlen(command));
         sleep(1);
         std::cout << "Gyro 0 Reset" << std::endl;
         res.success = true;
@@ -127,15 +124,16 @@ public:
         char command[2] = {0};
         std::cout << "Calibration" << std::endl;
         sprintf(command, "a");
-        usb->Send(command, strlen(command));
+        usb_->Send(command, strlen(command));
         std::cout << "Calibrate start ";
         for(int i=0; i<8; ++i) {
             std::cout << ". ";
             sleep(1);
         }
-        std::cout << "finish." << std::endl;
+        
         res.success = true;
-        res.message = "ADIS driver done with calibration.";
+        res.message = "ADIS driver is done with calibration.";
+        ROS_INFO_STREAM(res.message);
 
         return true;
     }
@@ -144,24 +142,23 @@ public:
         imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 10)),
         reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
         carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
-        gyro_unit(0.00836181640625), acc_unit(0.8), init_angle(0.0),
-        port_name("/dev/ttyUSB0"), baudrate(115200), loop_rate(50), z_axis_dir_(-1)
+        gyro_unit_(0.00836181640625), acc_unit_(0.8),
+        port_name_("/dev/ttyUSB0"), baudrate_(115200), loop_rate_(50), z_axis_dir_(-1)
     {
         ros::NodeHandle private_nh("~");
-        private_nh.getParam("port_name", port_name);
-        private_nh.param<double>("gyro_unit", gyro_unit, gyro_unit);
-        private_nh.param<double>("acc_unit", acc_unit, acc_unit);
-        private_nh.param<int>("baud_rate", baudrate, baudrate);
-        private_nh.param<double>("init_angle", init_angle, init_angle);
+        private_nh.getParam("port_name", port_name_);
+        private_nh.param<double>("gyro_unit", gyro_unit_, gyro_unit_);
+        private_nh.param<double>("acc_unit", acc_unit_, acc_unit_);
+        private_nh.param<int>("baud_rate", baudrate_, baudrate_);
         private_nh.param<int>("z_axis_dir", z_axis_dir_, z_axis_dir_);
-        usb = new CComm(port_name, baudrate);
+        usb_ = new CComm(port_name_, baudrate_);
     }
 
     bool init() {
         char command[2] = {0};
         char command2[101] = {0};
         //シリアルポートオープン 
-        if (!usb->Open()) {
+        if (!usb_->Open()) {
             std::cerr << "open error" << std::endl;
             return false;
         }
@@ -171,7 +168,7 @@ public:
         // if(m_calibration == true){
         std::cout << "Calibration" << std::endl;
         sprintf(command, "a");
-        usb->Send(command, strlen(command));
+        usb_->Send(command, strlen(command));
         std::cout << "send = " << command << std::endl;
         for(int i=0; i<8; ++i) {
             printf(". ");
@@ -181,13 +178,13 @@ public:
         //コンフィギュレーション リセット
         // if(m_reset == true){
         sprintf(command, "0");
-        usb->Send(command, strlen(command));        //送信
+        usb_->Send(command, strlen(command));        //送信
         std::cout << "send = " << command << std::endl;
         sleep(1);
         std::cout << "Gyro 0 Reset" << std::endl;
         // }
-        usb->Recv(command2, 100);        //空読み バッファクリアが効かない？
-        usb->ClearRecvBuf();                //バッファクリア
+        usb_->Recv(command2, 100);        //空読み バッファクリアが効かない？
+        usb_->ClearRecvBuf();                //バッファクリア
         return true;
     }
 
@@ -202,8 +199,8 @@ public:
             try{
                 ImuData data = getImuData();
                 if (data.flag == false){
-                    usb->Close();
-                    if(!usb->Open()) {
+                    usb_->Close();
+                    if(!usb_->Open()) {
                         std::cerr << "reconnecting" << std::endl;
                     }
                 }else{
