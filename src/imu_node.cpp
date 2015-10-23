@@ -53,7 +53,7 @@ private:
     CComm* usb_;
     double gyro_unit_;
     double acc_unit_;
-    std::string port_name_;
+    std::string port_name_, imu_frame_;
     int   baudrate_;
     ros::Rate loop_rate_;
     int  z_axis_dir_;
@@ -142,7 +142,7 @@ public:
         imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 10)),
         reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
         carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
-        gyro_unit_(0.00836181640625), acc_unit_(0.8),
+        gyro_unit_(0.00836181640625), acc_unit_(0.8), imu_frame_("imu_link"),
         port_name_("/dev/ttyUSB0"), baudrate_(115200), loop_rate_(50), z_axis_dir_(-1)
     {
         ros::NodeHandle private_nh("~");
@@ -204,6 +204,7 @@ public:
                         std::cerr << "reconnecting" << std::endl;
                     }
                 }else{
+                    output_msg.header.frame_id = imu_frame_;
                     output_msg.header.stamp = ros::Time::now();
                       
                     ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
