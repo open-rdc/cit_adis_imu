@@ -2,7 +2,7 @@
 <package>
   <name>cit_adis_imu</name>
   <version>0.0.0</version>
-  <description>cit_adis_imu for ADIS IMUs driver with the interface board made by Chiba Institute of Technology.</description>
+  <description>cit_adis_imu for ADIS IMUs with the interface board made by Chiba Institute of Technology.</description>
 
   <maintainer email="d.maekawa@rapyuta-robotics.com">Daiki Maekawa</maintainer>
 
