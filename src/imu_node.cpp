@@ -52,7 +52,6 @@ private:
     ros::Publisher imu_pub_;
     ros::ServiceServer reset_service_;
     ros::ServiceServer carivrate_service_;
-    float geta;
     CComm* usb;
     double gyro_unit;
     double acc_unit;
@@ -145,7 +144,7 @@ public:
         imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 10)),
         reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
         carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
-        geta(0), gyro_unit(0.00836181640625), acc_unit(0.8), init_angle(0.0),
+        gyro_unit(0.00836181640625), acc_unit(0.8), init_angle(0.0),
         port_name("/dev/ttyUSB0"), baudrate(115200), loop_rate(50), z_axis_dir_(-1)
     {
         ros::NodeHandle private_nh("~");
@@ -187,7 +186,6 @@ public:
         sleep(1);
         std::cout << "Gyro 0 Reset" << std::endl;
         // }
-        geta = 0;
         usb->Recv(command2, 100);        //空読み バッファクリアが効かない？
         usb->ClearRecvBuf();                //バッファクリア
         return true;
