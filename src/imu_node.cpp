@@ -147,6 +147,7 @@ public:
     {
         ros::NodeHandle private_nh("~");
         private_nh.getParam("port_name", port_name_);
+        private_nh.param<std::string>("imu_frame", imu_frame_, imu_frame_);
         private_nh.param<double>("gyro_unit", gyro_unit_, gyro_unit_);
         private_nh.param<double>("acc_unit", acc_unit_, acc_unit_);
         private_nh.param<int>("baud_rate", baudrate_, baudrate_);
