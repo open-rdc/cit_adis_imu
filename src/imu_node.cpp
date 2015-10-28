@@ -147,7 +147,7 @@ public:
         imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 10)),
         reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
         carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
-        gyro_unit_(0.00836181640625), acc_unit_(0.0008192),
+        gyro_unit_(0.00836181640625), acc_unit_(0.0008192),imu_frame_("imu_link"),
         port_name_("/dev/ttyUSB0"), baudrate_(115200), loop_rate_(50), z_axis_dir_(-1), y_axis_dir_(-1)
     {
         ros::NodeHandle private_nh("~");
