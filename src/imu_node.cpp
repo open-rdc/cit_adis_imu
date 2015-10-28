@@ -90,7 +90,7 @@ private:
         data.angular_deg[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit_;
         memmove(temp,command2+4,4);
         sum = sum ^ ((short)strtol(temp, NULL, 16));
-        data.angular_deg[1] = std::asin(((short)strtol(temp, NULL, 16)) * acc_unit) * y_axis_dir_;
+        data.angular_deg[1] = std::asin(((short)strtol(temp, NULL, 16)) * acc_unit_) * y_axis_dir_;
         memmove(temp,command2+8,4);
         sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit_ * z_axis_dir_;
@@ -147,8 +147,8 @@ public:
         imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 10)),
         reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
         carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
-        geta(0), gyro_unit(0.00836181640625), acc_unit(0.0008192), init_angle(0.0),
-        port_name("/dev/ttyUSB0"), baudrate(115200), loop_rate(50), z_axis_dir_(-1), y_axis_dir_(-1)
+        gyro_unit_(0.00836181640625), acc_unit_(0.0008192),
+        port_name_("/dev/ttyUSB0"), baudrate_(115200), loop_rate_(50), z_axis_dir_(-1), y_axis_dir_(-1)
     {
         ros::NodeHandle private_nh("~");
         private_nh.getParam("port_name", port_name_);
@@ -159,7 +159,7 @@ public:
         private_nh.param<int>("z_axis_dir", z_axis_dir_, z_axis_dir_);
         private_nh.param<int>("y_axis_dir", y_axis_dir_, y_axis_dir_);
 
-        usb = new CComm(port_name, baudrate);
+        usb_ = new CComm(port_name_, baudrate_);
     }
 
     bool init() {
