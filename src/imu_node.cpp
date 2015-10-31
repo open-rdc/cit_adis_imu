@@ -12,6 +12,7 @@
 #include "Comm.h"
 
 #include <sensor_msgs/Imu.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <std_srvs/Trigger.h>
 
 #include <stdexcept>
@@ -52,6 +53,7 @@ struct ImuData {
 class IMU {
 private:
     ros::Publisher imu_pub_;
+    ros::Publisher imu_rpy_pub_;
     ros::ServiceServer reset_service_;
     ros::ServiceServer carivrate_service_;
     CComm* usb_;
@@ -145,6 +147,7 @@ public:
 
     IMU(ros::NodeHandle node) :
         imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 10)),
+        imu_rpy_pub_(node.advertise<std_msgs::Float64MultiArray>("imu_rpy",10)),
         reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
         carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
         gyro_unit_(0.00836181640625), acc_unit_(0.0008192),imu_frame_("imu_link"),
@@ -204,6 +207,7 @@ public:
         while (ros::ok()) {
             tf::Quaternion q;
             sensor_msgs::Imu output_msg;
+            std_msgs::Float64MultiArray output_rpy;
             try{
                 ImuData data = getImuData();
                 if (data.flag == false){
@@ -230,9 +234,11 @@ public:
                         abnormal_count = 0;
                         angular_z_deg = data.angular_deg[2];
                     }
-                    
+                    output_rpy.data.push_back(data.angular_deg[1]);
+                    output_rpy.data.push_back(deg_to_rad(angular_z_deg));
                     q = tf::createQuaternionFromRPY(data.angular_deg[1], 0.0, deg_to_rad(angular_z_deg));
                     tf::quaternionTFToMsg(q, output_msg.orientation);
+                    imu_rpy_pub_.publish(output_rpy);
                     imu_pub_.publish(output_msg);
                     old_angular_z_deg = angular_z_deg;
 
