@@ -201,6 +201,8 @@ public:
 
     void run() {
         double old_angular_z_deg = getImuData().angular_deg[2];
+        double y_deg_tmp[10]={};
+        int y_deg_avg_cnt=0;
         double angular_z_deg = 0;
         unsigned short abnormal_count = 0;
 
@@ -219,7 +221,7 @@ public:
                     output_msg.header.frame_id = imu_frame_;
                     output_msg.header.stamp = ros::Time::now();
                       
-                    // ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
+                    // ROS_INFO_STREAM("y_deg = " << data.angular_deg[0]);
                     ROS_INFO_STREAM("y_deg = " << rad_to_deg(data.angular_deg[1]));
                     ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
                       
@@ -234,9 +236,19 @@ public:
                         abnormal_count = 0;
                         angular_z_deg = data.angular_deg[2];
                     }
-                    output_rpy.data.push_back(data.angular_deg[1]);
+                    y_deg_tmp[y_deg_avg_cnt]=data.angular_deg[1];
+                    double y_deg_sum=0;
+                    for(int i=0;i<10;i++){
+                        y_deg_sum += y_deg_tmp[i];
+                    }
+                    double y_deg_avg = y_deg_sum / 10;
+                    y_deg_avg_cnt++;
+                    if(y_deg_avg_cnt>9){
+                        y_deg_avg_cnt = 0;
+                    }
+                    output_rpy.data.push_back(y_deg_avg);
                     output_rpy.data.push_back(deg_to_rad(angular_z_deg));
-                    q = tf::createQuaternionFromRPY(0.0, data.angular_deg[1], deg_to_rad(angular_z_deg));
+                    q = tf::createQuaternionFromRPY(0.0, y_deg_avg, deg_to_rad(angular_z_deg));
                     tf::quaternionTFToMsg(q, output_msg.orientation);
                     imu_rpy_pub_.publish(output_rpy);
                     imu_pub_.publish(output_msg);
