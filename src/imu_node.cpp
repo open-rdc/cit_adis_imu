@@ -236,7 +236,7 @@ public:
                     }
                     output_rpy.data.push_back(data.angular_deg[1]);
                     output_rpy.data.push_back(deg_to_rad(angular_z_deg));
-                    q = tf::createQuaternionFromRPY(data.angular_deg[1], 0.0, deg_to_rad(angular_z_deg));
+                    q = tf::createQuaternionFromRPY(0.0, data.angular_deg[1], deg_to_rad(angular_z_deg));
                     tf::quaternionTFToMsg(q, output_msg.orientation);
                     imu_rpy_pub_.publish(output_rpy);
                     imu_pub_.publish(output_msg);
