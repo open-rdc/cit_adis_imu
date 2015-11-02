@@ -53,7 +53,6 @@ struct ImuData {
 class IMU {
 private:
     ros::Publisher imu_pub_;
-    ros::Publisher imu_rpy_pub_;
     ros::ServiceServer reset_service_;
     ros::ServiceServer carivrate_service_;
     CComm* usb_;
@@ -147,7 +146,6 @@ public:
 
     IMU(ros::NodeHandle node) :
         imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 10)),
-        imu_rpy_pub_(node.advertise<std_msgs::Float64MultiArray>("imu_rpy",10)),
         reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
         carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
         gyro_unit_(0.00836181640625), acc_unit_(0.0008192),imu_frame_("imu_link"),
@@ -250,7 +248,6 @@ public:
                     output_rpy.data.push_back(deg_to_rad(angular_z_deg));
                     q = tf::createQuaternionFromRPY(0.0, y_deg_avg, deg_to_rad(angular_z_deg));
                     tf::quaternionTFToMsg(q, output_msg.orientation);
-                    imu_rpy_pub_.publish(output_rpy);
                     imu_pub_.publish(output_msg);
                     old_angular_z_deg = angular_z_deg;
 
