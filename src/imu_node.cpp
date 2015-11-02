@@ -12,6 +12,7 @@
 #include "Comm.h"
 
 #include <sensor_msgs/Imu.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <std_srvs/Trigger.h>
 
 #include <stdexcept>
@@ -26,6 +27,10 @@ public:
 
 float deg_to_rad(float deg) {
     return deg / 180.0f * M_PI;
+}
+
+float rad_to_deg(float rad){
+    return rad * 180.0f / M_PI;
 }
 
 template<class T>
@@ -57,6 +62,7 @@ private:
     int   baudrate_;
     ros::Rate loop_rate_;
     int  z_axis_dir_;
+    int  y_axis_dir_;
 
     ImuData getImuData(){
         ImuData data;
@@ -85,7 +91,7 @@ private:
         data.angular_deg[0] = ((short)strtol(temp, NULL, 16)) * gyro_unit_;
         memmove(temp,command2+4,4);
         sum = sum ^ ((short)strtol(temp, NULL, 16));
-        data.angular_deg[1] = ((short)strtol(temp, NULL, 16)) * gyro_unit_;
+        data.angular_deg[1] = std::asin(((short)strtol(temp, NULL, 16)) * acc_unit_) * y_axis_dir_;
         memmove(temp,command2+8,4);
         sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit_ * z_axis_dir_;
@@ -142,8 +148,8 @@ public:
         imu_pub_(node.advertise<sensor_msgs::Imu>("imu", 10)),
         reset_service_(node.advertiseService("imu_reset", &IMU::resetCallback, this)), 
         carivrate_service_(node.advertiseService("imu_caribrate", &IMU::caribrateCallback, this)),
-        gyro_unit_(0.00836181640625), acc_unit_(0.8), imu_frame_("imu_link"),
-        port_name_("/dev/ttyUSB0"), baudrate_(115200), loop_rate_(50), z_axis_dir_(-1)
+        gyro_unit_(0.00836181640625), acc_unit_(0.0008192),imu_frame_("imu_link"),
+        port_name_("/dev/ttyUSB0"), baudrate_(115200), loop_rate_(50), z_axis_dir_(-1), y_axis_dir_(-1)
     {
         ros::NodeHandle private_nh("~");
         private_nh.getParam("port_name", port_name_);
@@ -152,6 +158,8 @@ public:
         private_nh.param<double>("acc_unit", acc_unit_, acc_unit_);
         private_nh.param<int>("baud_rate", baudrate_, baudrate_);
         private_nh.param<int>("z_axis_dir", z_axis_dir_, z_axis_dir_);
+        private_nh.param<int>("y_axis_dir", y_axis_dir_, y_axis_dir_);
+
         usb_ = new CComm(port_name_, baudrate_);
     }
 
@@ -191,6 +199,8 @@ public:
 
     void run() {
         double old_angular_z_deg = getImuData().angular_deg[2];
+        double y_deg_tmp[10]={};
+        int y_deg_avg_cnt=0;
         double angular_z_deg = 0;
         unsigned short abnormal_count = 0;
 
@@ -208,8 +218,8 @@ public:
                     output_msg.header.frame_id = imu_frame_;
                     output_msg.header.stamp = ros::Time::now();
                       
-                    ROS_INFO_STREAM("x_deg = " << data.angular_deg[0]);
-                    ROS_INFO_STREAM("y_deg = " << data.angular_deg[1]);
+                    // ROS_INFO_STREAM("y_deg = " << data.angular_deg[0]);
+                    ROS_INFO_STREAM("y_deg = " << rad_to_deg(data.angular_deg[1]));
                     ROS_INFO_STREAM("z_deg = " << data.angular_deg[2]);
                       
                     if(!isInRange(std::abs(old_angular_z_deg), 180.0, 165.0) && !isInRange(std::abs(data.angular_deg[2]), 180.0, 165.0) &&
@@ -223,8 +233,17 @@ public:
                         abnormal_count = 0;
                         angular_z_deg = data.angular_deg[2];
                     }
-                    
-                    q = tf::createQuaternionFromRPY(deg_to_rad(data.angular_deg[0]), deg_to_rad(-data.angular_deg[1]), deg_to_rad(angular_z_deg));
+                    y_deg_tmp[y_deg_avg_cnt]=data.angular_deg[1];
+                    double y_deg_sum=0;
+                    for(int i=0;i<10;i++){
+                        y_deg_sum += y_deg_tmp[i];
+                    }
+                    double y_deg_avg = y_deg_sum / 10;
+                    y_deg_avg_cnt++;
+                    if(y_deg_avg_cnt>9){
+                        y_deg_avg_cnt = 0;
+                    }
+                    q = tf::createQuaternionFromRPY(0.0, y_deg_avg, deg_to_rad(angular_z_deg));
                     tf::quaternionTFToMsg(q, output_msg.orientation);
                     imu_pub_.publish(output_msg);
                     old_angular_z_deg = angular_z_deg;
