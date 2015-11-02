@@ -207,7 +207,6 @@ public:
         while (ros::ok()) {
             tf::Quaternion q;
             sensor_msgs::Imu output_msg;
-            std_msgs::Float64MultiArray output_rpy;
             try{
                 ImuData data = getImuData();
                 if (data.flag == false){
@@ -244,8 +243,6 @@ public:
                     if(y_deg_avg_cnt>9){
                         y_deg_avg_cnt = 0;
                     }
-                    output_rpy.data.push_back(y_deg_avg);
-                    output_rpy.data.push_back(deg_to_rad(angular_z_deg));
                     q = tf::createQuaternionFromRPY(0.0, y_deg_avg, deg_to_rad(angular_z_deg));
                     tf::quaternionTFToMsg(q, output_msg.orientation);
                     imu_pub_.publish(output_msg);
