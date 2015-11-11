@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>cit_adis_imu</name>
-  <version>0.0.1</version>
+  <version>0.0.2</version>
   <description>cit_adis_imu for ADIS IMUs with the interface board made by Chiba Institute of Technology.</description>
 
   <maintainer email="d.maekawa@rapyuta-robotics.com">Daiki Maekawa</maintainer>
