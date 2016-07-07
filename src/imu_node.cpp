@@ -40,11 +40,13 @@ bool isInRange(T value, T max, T min){
 
 struct ImuData {
     double angular_deg[3];
+    double acceralation[3];
 		bool flag;
     
     ImuData(){
         for(int i=0; i < 2; i++){
             angular_deg[i] = 0;
+            acceralation[i] = 0;
         }
     }
 };
@@ -95,8 +97,17 @@ private:
         memmove(temp,command2+8,4);
         sum = sum ^ ((short)strtol(temp, NULL, 16));
         data.angular_deg[2] = ((short)strtol(temp, NULL, 16)) * gyro_unit_ * z_axis_dir_;
-
         memmove(temp,command2+12,4);
+        data.acceralation[0] = ((short)strtol(temp, NULL, 16)) * acc_unit_;
+        sum = sum ^ ((short)strtol(temp, NULL, 16));
+        memmove(temp,command2+16,4);
+        data.acceralation[1] = ((short)strtol(temp, NULL, 16)) * acc_unit_;
+        sum = sum ^ ((short)strtol(temp, NULL, 16));
+        memmove(temp,command2+20,4);
+        data.acceralation[2] = ((short)strtol(temp, NULL, 16)) * acc_unit_;
+        sum = sum ^ ((short)strtol(temp, NULL, 16));
+
+        memmove(temp,command2+24,4);
         
         if(sum != ((short)strtol(temp, NULL, 16))){
             ROS_ERROR_STREAM("Recv Checksum: " << ((short)strtol(temp, NULL, 16)));
@@ -245,6 +256,11 @@ public:
                     }
                     q = tf::createQuaternionFromRPY(0.0, y_deg_avg, deg_to_rad(angular_z_deg));
                     tf::quaternionTFToMsg(q, output_msg.orientation);
+
+                    output_msg.linear_acceleration.x = data.acceralation[0];
+                    output_msg.linear_acceleration.y = data.acceralation[1];
+                    output_msg.linear_acceleration.z = data.acceralation[2];
+
                     imu_pub_.publish(output_msg);
                     old_angular_z_deg = angular_z_deg;
 
